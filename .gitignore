@@ -1,40 +1,28 @@
-# Dependencies
-node_modules/
+node_modules
 
-# Build / SvelteKit
-.svelte-kit/
-build/
-dist/
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+/generated
 
-# Environment
-.env
-.env.*
-!.env.example
-
-# Database
-*.db
-*.db-journal
-prisma/migrations/**/migration_lock.toml
-
-# Logs & cache
-*.log
-npm-debug.log*
-.npm
-.cache/
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
 
 # OS
 .DS_Store
 Thumbs.db
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
 
-# Testing
-coverage/
-.nyc_output/
-
-# Optional
-*.local
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
