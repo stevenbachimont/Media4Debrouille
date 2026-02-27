@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build / SvelteKit
+.svelte-kit/
+build/
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Database
+*.db
+*.db-journal
+prisma/migrations/**/migration_lock.toml
+
+# Logs & cache
+*.log
+npm-debug.log*
+.npm
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Optional
+*.local
