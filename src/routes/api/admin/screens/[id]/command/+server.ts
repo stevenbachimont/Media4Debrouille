@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireAdminOnly } from '$lib/server/api-auth';
 import { prisma } from '$lib/server/db';
 import { getIO } from '$lib/server/socket';
+import { setReloadRequested } from '$lib/server/reload-request-store';
 
 const COMMANDS: Record<string, { event: string; payload?: (body: Record<string, unknown>) => unknown }> = {
 	SCREENSHOT: {
@@ -51,6 +52,10 @@ export const POST: RequestHandler = async (event) => {
 	const io = getIO();
 	if (io) {
 		io.to(`screen:${screenId}`).emit(def.event, payload);
+	}
+	// Fallback sans Socket.io (ex. en dev) : le player poll reload-check
+	if (command === 'RELOAD') {
+		setReloadRequested(screenId);
 	}
 
 	return json({ ok: true, commandId: commandId ?? undefined });

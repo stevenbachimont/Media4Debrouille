@@ -7,6 +7,7 @@
 	const JWT_KEY = 'player_jwt';
 	const HEARTBEAT_INTERVAL_MS = 30_000;
 	const FALLBACK_DURATION_MS = 10_000;
+	const RELOAD_CHECK_INTERVAL_MS = 15_000;
 
 	type ScheduleItem = {
 		mediaId: string;
@@ -35,17 +36,41 @@
 	let startTime = $state(Date.now());
 	let socket = $state<ReturnType<typeof io> | null>(null);
 	let heartbeatTimer = $state<ReturnType<typeof setInterval> | null>(null);
+	let reloadCheckTimer = $state<ReturnType<typeof setInterval> | null>(null);
 	let fallbackTime = $state('');
+	let scheduleStatus = $state<'loading' | 'loaded' | 'empty' | 'error'>('loading');
 
 	async function fetchSchedule(): Promise<ScheduleData | null> {
-		if (!jwt || !screenId) return null;
+		if (!jwt || !screenId) {
+			console.log('[Player] fetchSchedule: skip (jwt ou screenId manquant)', { hasJwt: !!jwt, screenId });
+			return null;
+		}
+		scheduleStatus = 'loading';
+		const url = `/api/player/${screenId}/schedule`;
+		console.log('[Player] fetchSchedule: appel', url);
 		try {
-			const res = await fetch(`/api/player/${screenId}/schedule`, {
+			const res = await fetch(url, {
 				headers: { Authorization: `Bearer ${jwt}` }
 			});
-			if (!res.ok) return null;
-			return await res.json();
-		} catch {
+			console.log('[Player] fetchSchedule: réponse', res.status, res.statusText, res.ok);
+			if (!res.ok) {
+				const errText = await res.text();
+				console.log('[Player] fetchSchedule: corps erreur', errText);
+				scheduleStatus = 'error';
+				return null;
+			}
+			const out = await res.json();
+			const itemsCount = out.items?.length ?? 0;
+			console.log('[Player] fetchSchedule: données', {
+				playlistId: out.playlistId,
+				itemsCount,
+				items: out.items?.map((i: { name: string; cdnUrl: string }) => ({ name: i.name, cdnUrl: i.cdnUrl?.slice(0, 50) }))
+			});
+			scheduleStatus = itemsCount > 0 ? 'loaded' : 'empty';
+			return out;
+		} catch (e) {
+			console.log('[Player] fetchSchedule: exception', e);
+			scheduleStatus = 'error';
 			return null;
 		}
 	}
@@ -106,14 +131,19 @@
 
 	onMount(() => {
 		const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(JWT_KEY) : null;
+		console.log('[Player] onMount: JWT présent?', !!stored, 'screenId (from data)', data.screenId);
 		if (!stored) {
+			console.log('[Player] onMount: redirection vers /player/activate');
 			goto('/player/activate');
 			return;
 		}
+		jwt = stored;
 		startTime = Date.now();
+		console.log('[Player] onMount: jwt assigné, screenId=', data.screenId, '→ fetchSchedule()');
 
 		(async () => {
 			const s = await fetchSchedule();
+			console.log('[Player] onMount: fetchSchedule résultat', s ? { playlistId: s.playlistId, itemsCount: s.items?.length } : 'null');
 			if (s) schedule = s;
 		})();
 
@@ -161,6 +191,24 @@
 		heartbeatTimer = setInterval(emitHeartbeat, HEARTBEAT_INTERVAL_MS);
 		emitHeartbeat();
 
+		// Polling reload-check (fallback quand Socket.io absent, ex. en dev)
+		const checkReload = async () => {
+			if (!jwt || !screenId) return;
+			try {
+				const res = await fetch(`/api/player/${screenId}/reload-check`, {
+					headers: { Authorization: `Bearer ${jwt}` }
+				});
+				if (res.ok) {
+					const out = await res.json();
+					if (out?.reload) location.reload();
+				}
+			} catch {
+				// ignore
+			}
+		};
+		reloadCheckTimer = setInterval(checkReload, RELOAD_CHECK_INTERVAL_MS);
+		checkReload();
+
 		// Horloge écran de secours
 		const updateClock = () => {
 			fallbackTime = new Date().toLocaleTimeString('fr-FR', {
@@ -174,6 +222,7 @@
 
 		return () => {
 			if (heartbeatTimer) clearInterval(heartbeatTimer);
+			if (reloadCheckTimer) clearInterval(reloadCheckTimer);
 			clearInterval(clockTimer);
 			s?.disconnect();
 		};
@@ -246,10 +295,26 @@
 			{/if}
 		{/each}
 	{:else}
-		<!-- Écran de secours : heure + logo -->
+		<!-- Écran de secours : heure + explication -->
 		<div class="flex h-full flex-col items-center justify-center gap-6 text-white">
 			<p class="text-6xl font-light tabular-nums">{fallbackTime || '--:--:--'}</p>
 			<p class="text-xl text-white/80">Digital Signage</p>
+			<div class="max-w-md rounded bg-white/10 px-4 py-3 text-center text-sm text-white/90">
+				{#if scheduleStatus === 'loading'}
+					<p>Chargement du planning…</p>
+				{:else if scheduleStatus === 'error'}
+					<p><strong>Erreur de chargement.</strong> Vérifiez que l’écran est bien activé (JWT valide) et que l’URL correspond à cet écran.</p>
+				{:else if scheduleStatus === 'empty'}
+					<p><strong>Aucun média à afficher.</strong> Le player reçoit le planning via l’API puis affiche les médias de la playlist. Vérifiez :</p>
+					<ul class="mt-2 list-inside list-disc text-left">
+						<li>Un <strong>planning</strong> cible cet écran (ou son groupe), avec des dates qui incluent aujourd’hui.</li>
+						<li>La <strong>playlist</strong> du planning contient au moins un média.</li>
+						<li>Chaque média a une <strong>URL</strong> renseignée (champ URL dans Médias).</li>
+					</ul>
+				{:else}
+					<p>En attente du planning…</p>
+				{/if}
+			</div>
 		</div>
 	{/if}
 </div>

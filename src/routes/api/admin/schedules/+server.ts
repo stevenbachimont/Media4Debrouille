@@ -48,7 +48,9 @@ export const POST: RequestHandler = async (event) => {
 
 	const prio = typeof priority === 'number' && priority >= 1 && priority <= 100 ? priority : 50;
 	const start = startDate ? new Date(startDate as string) : new Date();
-	const end = endDate ? new Date(endDate as string) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+	let end = endDate ? new Date(endDate as string) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+	// Inclure la journée entière pour la date de fin : 23:59:59.999
+	end.setUTCHours(23, 59, 59, 999);
 	const st = typeof startTime === 'string' && /^\d{2}:\d{2}$/.test(startTime) ? startTime : '00:00';
 	const et = typeof endTime === 'string' && /^\d{2}:\d{2}$/.test(endTime) ? endTime : '23:59';
 	const days = Array.isArray(daysOfWeek)

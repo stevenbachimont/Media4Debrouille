@@ -1,5 +1,14 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	let { data } = $props();
+
+	async function deletePlaylist() {
+		if (!data.playlist || !confirm(`Supprimer la playlist « ${data.playlist.name} » ?`)) return;
+		const res = await fetch(`/api/admin/playlists/${data.playlist.id}`, { method: 'DELETE' });
+		if (res.ok) goto('/admin/playlists');
+		else alert((await res.json().catch(() => ({}))).error || 'Erreur lors de la suppression');
+	}
 </script>
 
 <svelte:head>
@@ -14,6 +23,13 @@
 		<h1 class="text-2xl font-semibold text-slate-900">{data.playlist.name}</h1>
 		<div class="flex gap-2">
 			<a href="/admin/playlists/{data.playlist.id}/edit" class="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Modifier</a>
+			<button
+				type="button"
+				onclick={deletePlaylist}
+				class="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 hover:bg-red-100"
+			>
+				Supprimer
+			</button>
 			<a href="/admin/playlists" class="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Retour</a>
 		</div>
 	</div>

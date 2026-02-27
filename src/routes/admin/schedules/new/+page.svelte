@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
+
 	let { data } = $props();
 	const form = $derived((data as { form?: { message?: string } }).form);
 
@@ -11,6 +13,10 @@
 		{ value: 5, label: 'Vendredi' },
 		{ value: 6, label: 'Samedi' }
 	];
+
+	async function refreshLists() {
+		await invalidateAll();
+	}
 </script>
 
 <svelte:head>
@@ -35,17 +41,32 @@
 	</div>
 	<div id="targetId-container">
 		<label for="targetId" class="block text-sm font-medium text-slate-700">Écran / Groupe *</label>
-		<select id="targetId" name="targetId" required class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
-			<option value="">Choisir…</option>
-			{#each data.screens ?? [] as s}
-				<option value={s.id}>{s.name} ({s.site?.name})</option>
-			{/each}
-			<optgroup label="Groupes">
-				{#each data.groups ?? [] as g}
-					<option value={g.id}>Groupe : {g.name}</option>
+		<div class="mt-1 flex gap-2">
+			<select id="targetId" name="targetId" required class="min-w-0 flex-1 rounded border border-slate-300 px-3 py-2">
+				<option value="">Choisir…</option>
+				{#each data.screens ?? [] as s}
+					<option value={s.id}>{s.name} ({s.site?.name ?? 'sans site'})</option>
 				{/each}
-			</optgroup>
-		</select>
+				<optgroup label="Groupes">
+					{#each data.groups ?? [] as g}
+						<option value={g.id}>Groupe : {g.name}</option>
+					{/each}
+				</optgroup>
+			</select>
+			<button
+				type="button"
+				onclick={refreshLists}
+				class="rounded border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+				title="Recharger la liste des écrans et groupes"
+			>
+				Actualiser
+			</button>
+		</div>
+		{#if (data.screens?.length ?? 0) === 0 && (data.groups?.length ?? 0) === 0}
+			<p class="mt-2 text-sm text-amber-700">
+				Aucun écran ni groupe. <a href="/admin/screens/new" class="underline">Créez un écran</a> (ou un groupe depuis un site), puis cliquez sur « Actualiser » ci-dessus.
+			</p>
+		{/if}
 	</div>
 	<div>
 		<label for="playlistId" class="block text-sm font-medium text-slate-700">Playlist *</label>
@@ -60,16 +81,16 @@
 		<label for="priority" class="block text-sm font-medium text-slate-700">Priorité (1–100)</label>
 		<input id="priority" name="priority" type="number" min="1" max="100" value="50" class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
 	</div>
-	<div class="grid grid-cols-2 gap-4">
-		<div>
-			<label for="startDate" class="block text-sm font-medium text-slate-700">Date début</label>
-			<input id="startDate" name="startDate" type="date" class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
+		<div class="grid grid-cols-2 gap-4">
+			<div>
+				<label for="startDate" class="block text-sm font-medium text-slate-700">Date début</label>
+				<input id="startDate" name="startDate" type="date" value={new Date().toISOString().slice(0, 10)} class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
+			</div>
+			<div>
+				<label for="endDate" class="block text-sm font-medium text-slate-700">Date fin</label>
+				<input id="endDate" name="endDate" type="date" value={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)} class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
+			</div>
 		</div>
-		<div>
-			<label for="endDate" class="block text-sm font-medium text-slate-700">Date fin</label>
-			<input id="endDate" name="endDate" type="date" class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
-		</div>
-	</div>
 	<div class="grid grid-cols-2 gap-4">
 		<div>
 			<label for="startTime" class="block text-sm font-medium text-slate-700">Heure début (HH:MM)</label>
