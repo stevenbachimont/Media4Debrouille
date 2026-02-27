@@ -1,0 +1,360 @@
+// SPEC_v2 — Digital Signage Platform
+// SQLite (dev) / PostgreSQL (prod) via DATABASE_URL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// --- Auth console ---
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(VIEWER)
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+
+  sessions       Session[]
+  sentCommands   ScreenCommand[]
+  createdMedias  Media[]         @relation("MediaCreatedBy")
+  createdPlaylists Playlist[]    @relation("PlaylistCreatedBy")
+  createdTemplates Template[]    @relation("TemplateCreatedBy")
+  createdSchedules Schedule[]    @relation("ScheduleCreatedBy")
+  createdAlerts   Alert[]        @relation("AlertCreatedBy")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// --- Sites & écrans ---
+model Site {
+  id           String    @id @default(cuid())
+  name         String
+  city         String?
+  address      String?
+  timezone     String    @default("Europe/Paris")
+  contactName  String?
+  contactEmail String?
+  createdAt    DateTime  @default(now())
+
+  screenGroups ScreenGroup[]
+  screens      Screen[]
+}
+
+model ScreenGroup {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  screens Screen[]
+}
+
+model Screen {
+  id                      String    @id @default(cuid())
+  name                    String
+  description             String?
+  siteId                  String
+  groupId                 String?
+  activationToken         String?   @unique
+  activationTokenExpiresAt DateTime?
+  playerJWTBlacklisted    Boolean   @default(false)
+  status                  ScreenStatus @default(OFFLINE)
+  lastSeen                DateTime?
+  resolution              String?
+  orientation             ScreenOrientation?
+  playerVersion           String?
+  ipAddress               String?
+  uptime                  Int?      // secondes
+  currentPlaylistId       String?
+  currentMediaName        String?
+  lastScreenshotKey       String?
+  lastScreenshotAt        DateTime?
+  createdAt               DateTime  @default(now())
+
+  site         Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  group        ScreenGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  heartbeats   ScreenHeartbeat[]
+  commands     ScreenCommand[]
+  screenshots  ScreenScreenshot[]
+  proofOfPlays ProofOfPlay[]
+}
+
+enum ScreenStatus {
+  ONLINE
+  OFFLINE
+  WARNING
+}
+
+enum ScreenOrientation {
+  LANDSCAPE
+  PORTRAIT
+}
+
+// --- Médias ---
+model Media {
+  id              String    @id @default(cuid())
+  name            String
+  type            MediaType
+  s3Key           String?
+  url             String?   // WEBPAGE / RSS
+  cdnUrl          String?
+  duration        Int?      // secondes
+  thumbnailS3Key  String?
+  thumbnailCdnUrl String?
+  fileSize        Int?
+  mimeType        String?
+  encodingStatus  EncodingStatus? @default(PENDING)
+  tags            String?   // JSON array
+  validFrom       DateTime?
+  validUntil      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+  createdBy       User?     @relation("MediaCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  playlistItems PlaylistItem[]
+  proofOfPlays  ProofOfPlay[]
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  HTML
+  PDF
+  WEBPAGE
+  RSS
+  DATASET
+}
+
+enum EncodingStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERROR
+}
+
+// --- Templates ---
+model Template {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  thumbnailCdnUrl  String?
+  zonesJson       String   // JSON array of Zone
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String?
+  createdBy       User?    @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  playlists Playlist[]
+}
+
+// --- Playlists ---
+model Playlist {
+  id               String    @id @default(cuid())
+  name             String
+  description      String?
+  templateId       String
+  defaultDuration  Int       // secondes
+  transition       PlaylistTransition @default(FADE)
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdById      String?
+  createdBy        User?     @relation("PlaylistCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  template   Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  items      PlaylistItem[]
+  schedules  Schedule[]
+  proofOfPlays ProofOfPlay[]
+}
+
+model PlaylistItem {
+  id          String   @id @default(cuid())
+  playlistId  String
+  mediaId     String
+  zoneId      String   // ID de la zone dans le template
+  order       Int
+  duration    Int?     // override nullable
+  transitionIn  String?
+  transitionOut String?
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  media    Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+}
+
+enum PlaylistTransition {
+  FADE
+  SLIDE
+  NONE
+}
+
+// --- Planification ---
+model Schedule {
+  id             String    @id @default(cuid())
+  name           String
+  targetType     ScheduleTargetType
+  targetId       String    // screenId ou groupId
+  playlistId     String
+  priority       Int       // 1-100
+  startDate      DateTime  // UTC
+  endDate        DateTime  // UTC
+  startTime      String    // HH:MM
+  endTime        String    // HH:MM
+  daysOfWeek     String    // JSON [0..6]
+  isRecurring    Boolean   @default(true)
+  isInterruption Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?
+  createdBy      User?     @relation("ScheduleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+}
+
+enum ScheduleTargetType {
+  SCREEN
+  GROUP
+}
+
+// --- DataSources ---
+model DataSource {
+  id             String   @id @default(cuid())
+  name           String
+  type           DataSourceType
+  configJson     String
+  refreshInterval Int     // secondes
+  lastFetched    DateTime?
+  lastDataJson   String?
+}
+
+enum DataSourceType {
+  RSS
+  CSV
+  JSON_URL
+}
+
+// --- Alertes ---
+model Alert {
+  id           String    @id @default(cuid())
+  title        String
+  content      String
+  backgroundColor String?
+  textColor    String?
+  displayMode  AlertDisplayMode
+  targetType   AlertTargetType
+  targetId     String?
+  startAt      DateTime?
+  endAt        DateTime?
+  isActive     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  createdById  String?
+  createdBy    User?     @relation("AlertCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+enum AlertDisplayMode {
+  BANNER
+  FULLSCREEN
+}
+
+enum AlertTargetType {
+  ALL
+  GROUP
+  SCREEN
+}
+
+// --- Monitoring ---
+model ScreenHeartbeat {
+  id                 String   @id @default(cuid())
+  screenId           String
+  timestamp          DateTime @default(now())
+  currentPlaylistId  String?
+  currentMediaName   String?
+  uptime             Int?
+  memoryUsageMb      Float?
+  connectionType    String?
+  browserVersion    String?
+  resolution        String?
+  isVisible         Boolean?
+  errorMessage      String?
+
+  screen Screen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+}
+
+model ScreenCommand {
+  id              String    @id @default(cuid())
+  screenId        String
+  command         ScreenCommandType
+  payloadJson     String?
+  sentAt          DateTime  @default(now())
+  acknowledgedAt  DateTime?
+  status          CommandStatus @default(PENDING)
+  sentById        String?
+  sentBy          User?     @relation(fields: [sentById], references: [id], onDelete: SetNull)
+
+  screen     Screen  @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  screenshot ScreenScreenshot?
+}
+
+enum ScreenCommandType {
+  SCREENSHOT
+  RELOAD
+  RESTART_BROWSER
+  REBOOT
+  PLAYLIST_RELOAD
+  CACHE_CLEAR
+  ALERT_SHOW
+  ALERT_HIDE
+  VOLUME_SET
+}
+
+enum CommandStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+model ScreenScreenshot {
+  id          String    @id @default(cuid())
+  screenId    String
+  s3Key       String
+  cdnUrl      String?
+  takenAt     DateTime  @default(now())
+  commandId   String?   @unique
+  width       Int?
+  height      Int?
+  fileSizeBytes Int?
+
+  screen  Screen  @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  command ScreenCommand? @relation(fields: [commandId], references: [id], onDelete: SetNull)
+}
+
+// --- Proof of Play ---
+model ProofOfPlay {
+  id             String    @id @default(cuid())
+  screenId       String
+  playlistId     String
+  mediaId        String
+  playedAt       DateTime
+  durationSeconds Int
+  syncedAt       DateTime?
+
+  screen   Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  media    Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+}
