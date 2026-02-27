@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireAdminOnly } from '$lib/server/api-auth';
+import { requireAdmin, requireAdminOnly } from '$lib/server/api-auth';
 import { prisma } from '$lib/server/db';
 
 export const GET: RequestHandler = async (event) => {

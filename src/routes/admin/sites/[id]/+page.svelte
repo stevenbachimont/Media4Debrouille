@@ -1,5 +1,14 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	let { data } = $props();
+
+	async function deleteSite() {
+		if (!data.site || !confirm(`Supprimer le site « ${data.site.name} » ? Les groupes et écrans de ce site seront aussi supprimés.`)) return;
+		const res = await fetch(`/api/admin/sites/${data.site.id}`, { method: 'DELETE' });
+		if (res.ok) goto('/admin/sites');
+		else alert((await res.json().catch(() => ({}))).error || 'Erreur lors de la suppression');
+	}
 </script>
 
 <svelte:head>
@@ -22,6 +31,13 @@
 			class="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
 			>Modifier</a
 		>
+		<button
+			type="button"
+			onclick={deleteSite}
+			class="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 hover:bg-red-100"
+		>
+			Supprimer le site
+		</button>
 	</div>
 
 	<div class="mt-8">
@@ -33,9 +49,24 @@
 			{#each data.site.screenGroups || [] as group}
 				<li class="flex items-center justify-between rounded border border-slate-200 bg-white px-4 py-2">
 					<span class="font-medium text-slate-900">{group.name}</span>
-					{#if group.description}
-						<span class="text-sm text-slate-500">{group.description}</span>
-					{/if}
+					<div class="flex items-center gap-2">
+						{#if group.description}
+							<span class="text-sm text-slate-500">{group.description}</span>
+						{/if}
+						<button
+							type="button"
+							class="text-sm text-red-600 hover:text-red-800"
+							title="Supprimer le groupe"
+							onclick={async () => {
+								if (!confirm(`Supprimer le groupe « ${group.name} » ?`)) return;
+								const res = await fetch(`/api/admin/screen-groups/${group.id}`, { method: 'DELETE' });
+								if (res.ok) window.location.reload();
+								else alert((await res.json().catch(() => ({}))).error || 'Erreur');
+							}}
+						>
+							Supprimer
+						</button>
+					</div>
 				</li>
 			{:else}
 				<li class="text-slate-500">Aucun groupe.</li>

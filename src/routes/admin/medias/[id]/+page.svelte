@@ -1,5 +1,14 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	let { data } = $props();
+
+	async function deleteMedia() {
+		if (!data.media || !confirm(`Supprimer le média « ${data.media.name} » ?`)) return;
+		const res = await fetch(`/api/admin/medias/${data.media.id}`, { method: 'DELETE' });
+		if (res.ok) goto('/admin/medias');
+		else alert((await res.json().catch(() => ({}))).error || 'Erreur lors de la suppression');
+	}
 </script>
 
 <svelte:head>
@@ -18,6 +27,13 @@
 				class="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
 				>Modifier</a
 			>
+			<button
+				type="button"
+				onclick={deleteMedia}
+				class="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 hover:bg-red-100"
+			>
+				Supprimer
+			</button>
 			<a href="/admin/medias" class="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
 				>Retour</a
 			>

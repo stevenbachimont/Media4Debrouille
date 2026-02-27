@@ -46,7 +46,11 @@ export const PUT: RequestHandler = async (event) => {
 	}
 	if (typeof priority === 'number' && priority >= 1 && priority <= 100) updates.priority = priority;
 	if (startDate !== undefined) updates.startDate = new Date(startDate as string);
-	if (endDate !== undefined) updates.endDate = new Date(endDate as string);
+	if (endDate !== undefined) {
+		const end = new Date(endDate as string);
+		end.setUTCHours(23, 59, 59, 999);
+		updates.endDate = end;
+	}
 	if (typeof startTime === 'string' && /^\d{2}:\d{2}$/.test(startTime)) updates.startTime = startTime;
 	if (typeof endTime === 'string' && /^\d{2}:\d{2}$/.test(endTime)) updates.endTime = endTime;
 	if (Array.isArray(daysOfWeek)) {
