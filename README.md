@@ -43,6 +43,7 @@ Référence : [SPEC_v2.md](./SPEC_v2.md).
 | Planification (schedules : plage, priorité, jours) | ✅ |
 | Résolution conflits planning (avertissement) | ❌ |
 | Console admin (layout, nav) | ✅ |
+| **Tableau de bord console** (page d’accueil `/admin`) : stats, sites/écrans par site, aperçu plannings, logs commandes | ✅ |
 | Système d’alertes urgentes | ❌ |
 
 ### Phase 3 — Monitoring & Commandes
@@ -111,11 +112,12 @@ Voir `.env.example`. Obligatoires :
 
 ## Parcours type
 
-1. **Console** : se connecter (`/admin/login`), créer un site, un groupe, un écran.
-2. **Activation** : `/admin/screens/[id]/activate` → ouvrir l’URL (ou flasher le QR) sur le device player.
-3. **Contenu** : créer des **médias** (URL), un **template**, une **playlist** (médias + ordre), un **schedule** (écran ou groupe + playlist + plage horaire).
-4. **Player** : après activation, le player affiche la playlist planifiée sur `/player/[screenId]`.
-5. **Monitoring** : `/admin/monitoring` — statut des écrans, screenshot, recharger playlist, refresh navigateur.
+1. **Console** : se connecter (`/admin/login`). La page d’accueil (`/admin`) affiche le **tableau de bord** : stats (sites, écrans, en ligne, playlists, plannings, médias), sites avec écrans, aperçu des plannings, tableau des écrans, dernières commandes.
+2. **Sites & écrans** : créer un site, un groupe, un écran (menu Sites, Écrans).
+3. **Activation** : `/admin/screens/[id]/activate` → ouvrir l’URL (ou flasher le QR) sur le device player.
+4. **Contenu** : créer des **médias** (URL), un **template**, une **playlist** (médias + ordre), un **schedule** (écran ou groupe + playlist + plage horaire).
+5. **Player** : après activation, le player affiche la playlist planifiée sur `/player/[screenId]`. Rafraîchissement à distance : bouton depuis la fiche écran ou le monitoring ; si Socket.io est indisponible (ex. en dev), le player poll `/api/player/[screenId]/reload-check` toutes les 15 s.
+6. **Monitoring** : `/admin/monitoring` — statut des écrans, screenshot, recharger playlist, refresh navigateur.
 
 ---
 
@@ -129,9 +131,10 @@ Voir `.env.example`. Obligatoires :
 | `src/lib/server/player-jwt.ts` | Signature / vérification JWT player |
 | `src/lib/server/player-auth.ts` | Helper `requirePlayerAuth` pour les API player |
 | `src/lib/server/screenshot-store.ts` | Dernière capture par écran (mémoire) |
+| `src/lib/server/reload-request-store.ts` | Demande de rechargement player (fallback sans Socket.io) |
 | `src/hooks.server.ts` | Validation de session (console) |
 | `server.ts` | Point d’entrée production (handler + Socket.io) |
-| `src/routes/admin/` | Console (sites, écrans, médias, templates, playlists, planification, monitoring) |
+| `src/routes/admin/` | Console : tableau de bord (`/admin`), sites, écrans, médias, templates, playlists, planification, monitoring |
 | `src/routes/player/` | Activation et page player plein écran |
 | `src/routes/api/player/` | Schedule, playlist, heartbeat (auth JWT) |
 | `src/routes/api/admin/` | CRUD + commandes écrans |

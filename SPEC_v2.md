@@ -1,6 +1,6 @@
 # Digital Signage Platform — Spécification v2
 > Clone Media4Display — SvelteKit · Prisma · Socket.io · Lucia · S3
-> Version 2.1 — Finalisée le 26/02/2026
+> Version 2.2 — 28/02/2026
 
 ---
 
@@ -354,6 +354,33 @@ syncedAt (nullable — null si enregistré offline puis synchronisé)
 
 ---
 
+## Console — Tableau de bord (page d'accueil)
+
+La page d'accueil de la console (`/admin`) est un **tableau de bord** regroupant les informations essentielles pour une vue d'ensemble sans naviguer vers chaque section.
+
+### Données chargées (server load)
+
+- **Sites** : liste avec `_count.screens`, `_count.screenGroups`, et pour chaque site la liste des écrans (id, nom, statut, lastSeen).
+- **Écrans** : liste complète avec site, groupe, statut, currentPlaylistId, currentMediaName.
+- **Plannings** : liste avec playlist (nom, nombre d'items), tri par priorité.
+- **Dernières commandes** : les 25 derniers enregistrements `ScreenCommand` (commande, écran, date, auteur, statut PENDING/DELIVERED/FAILED).
+- **Statistiques** : nombre de sites, écrans, écrans « vus récemment » (lastSeen &lt; 5 min), playlists, plannings, médias.
+- **Groupes** : liste des `ScreenGroup` (id, nom) pour afficher la cible des plannings de type groupe.
+
+### Contenu affiché
+
+| Bloc | Description |
+|------|-------------|
+| **Cartes stats** | 6 indicateurs cliquables : Sites, Écrans, En ligne (5 min), Playlists, Plannings, Médias. Liens vers les listes correspondantes. |
+| **Sites et écrans** | Liste des sites avec, sous chaque site, les écrans et un badge de statut (En ligne / Hors ligne / Attention). Liens vers fiche site et fiche écran. |
+| **Plannings** | Tableau : Nom, Cible (écran ou groupe), Playlist (+ nb médias), Créneau (heures + jours). Lien « Voir tout » vers `/admin/schedules`. |
+| **Écrans** | Tableau compact : Nom, Site, Groupe, Statut, Playlist / Média en cours. Affichage des 15 premiers, lien vers `/admin/screens`. |
+| **Dernières commandes** | Logs des commandes envoyées aux écrans (Screenshot, Reload, Playlist reload, etc.) avec écran, date, auteur et statut. |
+
+Critère « En ligne » : `lastSeen` dans les 5 dernières minutes. Les commandes sont libellées en français (Capture, Rafraîchir, Recharger playlist, etc.).
+
+---
+
 ## API REST — Endpoints principaux
 
 ### Player (public, auth JWT Bearer)
@@ -599,6 +626,7 @@ Avec plusieurs instances SvelteKit derrière un load balancer :
 - [ ] Planification (plage horaire, priorité, récurrence, timezone)
 - [ ] Résolution des conflits de planning
 - [ ] Console admin complète (layout, navigation, sidebar)
+- [x] **Tableau de bord console** (page d'accueil `/admin`) : stats (sites, écrans, en ligne, playlists, plannings, médias), sites avec écrans par site, aperçu plannings, tableau écrans, logs des dernières commandes
 - [ ] Système d'alertes urgentes
 
 ### Phase 3 — Monitoring & Commandes à distance
@@ -703,3 +731,4 @@ En te basant sur SPEC_v2.md, crée la page /admin/monitoring :
 |---------|------|---------------|
 | 2.0 | 26/02/2026 | Spécification initiale v2 (auth player, activation, permissions, jobs, etc.) |
 | 2.1 | 26/02/2026 | Finalisation : canal heartbeat unique (WebSocket prioritaire, REST en fallback) ; room `admin` et diffusion des statuts côté serveur ; comportement fallback détaillé ; note API heartbeat ; versioning player ; prompt Phase 1 aligné sur heartbeat WebSocket. |
+| 2.2 | 28/02/2026 | Ajout de la tâche **Tableau de bord console** : section « Console — Tableau de bord (page d'accueil) » décrivant les données chargées et les blocs affichés (stats, sites/écrans, plannings, écrans, logs commandes) ; tâche cochée en Phase 2. |
