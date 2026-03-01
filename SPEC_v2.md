@@ -1,6 +1,6 @@
 # Digital Signage Platform — Spécification v2
 > Clone Media4Display — SvelteKit · Prisma · Socket.io · Lucia · S3
-> Version 2.2 — 28/02/2026
+> Version 2.3 — 26/02/2026
 
 ---
 
@@ -469,6 +469,7 @@ Le heartbeat est envoyé **prioritairement en WebSocket** via l’event `screen:
 
 ### Rendu
 - Plein écran CSS (`position: fixed; inset: 0; overflow: hidden; cursor: none`)
+- **Affichage des médias (responsive)** : images et vidéos occupent la **taille maximale possible** dans la zone du player sans modifier les proportions (`object-contain`, conteneur 100 %). Pas de recadrage ; bandes noires (letterbox/pillarbox) si le ratio du média diffère de celui de l’écran. Iframes (WEBPAGE, PDF) en pleine zone (`width`/`height` 100 %).
 - Template en **CSS absolu (positions en %)** — pas de canvas
 - Chaque zone joue sa playlist indépendamment
 - Zone CONTENT : transitions FADE / SLIDE entre médias
@@ -732,3 +733,4 @@ En te basant sur SPEC_v2.md, crée la page /admin/monitoring :
 | 2.0 | 26/02/2026 | Spécification initiale v2 (auth player, activation, permissions, jobs, etc.) |
 | 2.1 | 26/02/2026 | Finalisation : canal heartbeat unique (WebSocket prioritaire, REST en fallback) ; room `admin` et diffusion des statuts côté serveur ; comportement fallback détaillé ; note API heartbeat ; versioning player ; prompt Phase 1 aligné sur heartbeat WebSocket. |
 | 2.2 | 28/02/2026 | Ajout de la tâche **Tableau de bord console** : section « Console — Tableau de bord (page d'accueil) » décrivant les données chargées et les blocs affichés (stats, sites/écrans, plannings, écrans, logs commandes) ; tâche cochée en Phase 2. |
+| 2.3 | 26/02/2026 | **Player — affichage des médias** : précision dans la section Rendu — images et vidéos à la taille maximale possible sans déformer les proportions (`object-contain`), pas de recadrage ; iframes (WEBPAGE, PDF) en pleine zone. |

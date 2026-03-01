@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
 	let refreshStatus = $state<'idle' | 'sending' | 'ok' | 'error'>('idle');
+	let revokeStatus = $state<'idle' | 'sending' | 'ok' | 'error'>('idle');
 
 	async function deleteScreen() {
 		if (!data.screen || !confirm(`Supprimer l'écran « ${data.screen.name} » ?`)) return;
@@ -32,6 +34,56 @@
 		} catch {
 			refreshStatus = 'error';
 			setTimeout(() => (refreshStatus = 'idle'), 2000);
+		}
+	}
+
+	async function revokeJWT() {
+		if (!data.screen || !confirm('Révoquer le JWT de cet écran ? Le player devra être réactivé (nouveau QR code / lien d\'activation).')) return;
+		revokeStatus = 'sending';
+		try {
+			const res = await fetch(`/api/admin/screens/${data.screen.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ playerJWTBlacklisted: true })
+			});
+			if (res.ok) {
+				revokeStatus = 'ok';
+				invalidateAll();
+				setTimeout(() => (revokeStatus = 'idle'), 2000);
+			} else {
+				const err = await res.json().catch(() => ({}));
+				revokeStatus = 'error';
+				alert(err.error || 'Erreur');
+				setTimeout(() => (revokeStatus = 'idle'), 2000);
+			}
+		} catch {
+			revokeStatus = 'error';
+			setTimeout(() => (revokeStatus = 'idle'), 2000);
+		}
+	}
+
+	async function unrevokeJWT() {
+		if (!data.screen || !confirm('Réactiver le JWT ? L’écran pourra se reconnecter avec son ancien token (s’il est encore en mémoire). Sinon, utilisez « Activer cet écran » pour un nouveau lien.')) return;
+		revokeStatus = 'sending';
+		try {
+			const res = await fetch(`/api/admin/screens/${data.screen.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ playerJWTBlacklisted: false })
+			});
+			if (res.ok) {
+				revokeStatus = 'ok';
+				invalidateAll();
+				setTimeout(() => (revokeStatus = 'idle'), 2000);
+			} else {
+				const err = await res.json().catch(() => ({}));
+				revokeStatus = 'error';
+				alert(err.error || 'Erreur');
+				setTimeout(() => (revokeStatus = 'idle'), 2000);
+			}
+		} catch {
+			revokeStatus = 'error';
+			setTimeout(() => (revokeStatus = 'idle'), 2000);
 		}
 	}
 </script>
@@ -104,6 +156,33 @@
 				{data.screen.lastSeen
 					? new Date(data.screen.lastSeen).toLocaleString('fr-FR')
 					: 'Jamais'}
+			</dd>
+		</div>
+		<div>
+			<dt class="text-sm font-medium text-slate-500">JWT player</dt>
+			<dd class="flex items-center gap-2">
+				{#if data.screen.playerJWTBlacklisted}
+					<span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Révoqué</span>
+					<button
+						type="button"
+						onclick={unrevokeJWT}
+						disabled={revokeStatus === 'sending'}
+						class="text-sm text-slate-600 hover:underline disabled:opacity-50"
+					>
+						{revokeStatus === 'sending' ? '…' : 'Réactiver'}
+					</button>
+				{:else}
+					<span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Actif</span>
+					<button
+						type="button"
+						onclick={revokeJWT}
+						disabled={revokeStatus === 'sending'}
+						title="Révoquer le token du player (écran perdu/volé, réaffectation)"
+						class="text-sm text-amber-600 hover:underline disabled:opacity-50"
+					>
+						{revokeStatus === 'sending' ? '…' : revokeStatus === 'ok' ? 'Révoqué ✓' : 'Révoquer le JWT'}
+					</button>
+				{/if}
 			</dd>
 		</div>
 	</dl>

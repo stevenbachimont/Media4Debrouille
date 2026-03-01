@@ -22,6 +22,7 @@ export const PUT: RequestHandler = async (event) => {
 		type,
 		url,
 		cdnUrl,
+		s3Key,
 		duration,
 		tags,
 		validFrom,
@@ -39,6 +40,7 @@ export const PUT: RequestHandler = async (event) => {
 	}
 	if (url !== undefined) updates.url = typeof url === 'string' ? url.trim() || null : existing.url;
 	if (cdnUrl !== undefined) updates.cdnUrl = typeof cdnUrl === 'string' ? cdnUrl.trim() || null : existing.cdnUrl;
+	if (s3Key !== undefined) updates.s3Key = typeof s3Key === 'string' ? s3Key.trim() || null : existing.s3Key;
 	if (duration !== undefined) updates.duration = typeof duration === 'number' && duration > 0 ? duration : null;
 	if (tags !== undefined) updates.tags = typeof tags === 'string' ? tags : null;
 	if (validFrom !== undefined) updates.validFrom = validFrom ? new Date(validFrom as string) : null;

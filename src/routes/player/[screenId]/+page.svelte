@@ -129,6 +129,22 @@
 		nextItem();
 	}
 
+	function requestFullscreen() {
+		const root = typeof document !== 'undefined' ? document.getElementById('player-root') : null;
+		const doc = typeof document !== 'undefined' ? document.documentElement : null;
+		if (!doc) return;
+		try {
+			if (document.fullscreenElement) return;
+			if (root?.requestFullscreen) {
+				root.requestFullscreen();
+			} else if (doc.requestFullscreen) {
+				doc.requestFullscreen();
+			}
+		} catch {
+			// Ignorer si refusé (politique navigateur, pas de geste utilisateur)
+		}
+	}
+
 	onMount(() => {
 		const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(JWT_KEY) : null;
 		console.log('[Player] onMount: JWT présent?', !!stored, 'screenId (from data)', data.screenId);
@@ -209,6 +225,15 @@
 		reloadCheckTimer = setInterval(checkReload, RELOAD_CHECK_INTERVAL_MS);
 		checkReload();
 
+		// Plein écran : tentative au chargement (Chrome peut exiger un clic la 1ère fois)
+		requestFullscreen();
+		// Réessayer au premier clic si le navigateur a refusé sans geste utilisateur
+		const onFirstClick = () => {
+			requestFullscreen();
+			document.removeEventListener('click', onFirstClick);
+		};
+		document.addEventListener('click', onFirstClick);
+
 		// Horloge écran de secours
 		const updateClock = () => {
 			fallbackTime = new Date().toLocaleTimeString('fr-FR', {
@@ -221,6 +246,7 @@
 		const clockTimer = setInterval(updateClock, 1000);
 
 		return () => {
+			document.removeEventListener('click', onFirstClick);
 			if (heartbeatTimer) clearInterval(heartbeatTimer);
 			if (reloadCheckTimer) clearInterval(reloadCheckTimer);
 			clearInterval(clockTimer);
@@ -228,10 +254,12 @@
 		};
 	});
 
-	// Timer pour durée par média
+	// Timer pour durée par média. Ignoré s’il n’y a qu’un seul média (évite le clignotement) ou si c’est une vidéo (gérée par onended).
 	$effect(() => {
 		if (!schedule?.items?.length) return;
+		if (schedule.items.length === 1) return; // un seul média : pas de timer
 		const item = schedule.items[currentIndex];
+		if (item?.type === 'VIDEO') return; // vidéo : passage au suivant via onended
 		const durationMs = (item?.duration ?? schedule.defaultDuration) * 1000;
 		const t = setInterval(() => nextItem(), durationMs);
 		return () => clearInterval(t);
@@ -248,11 +276,12 @@
 	style="cursor: none;"
 	role="application"
 	aria-label="Player Digital Signage"
+	onclick={() => requestFullscreen()}
 >
 	{#if !jwt}
 		<div class="flex h-full items-center justify-center text-white">Redirection…</div>
 	{:else if schedule?.items?.length}
-		<!-- Une zone, boucle FADE -->
+		<!-- Une zone, boucle FADE — médias responsive, proportions conservées (object-contain) -->
 		{#each schedule.items as item, i (item.mediaId + item.order) }
 			{#if i === currentIndex}
 				<div
@@ -263,16 +292,17 @@
 						<img
 							src={item.cdnUrl}
 							alt={item.name}
-							class="max-h-full max-w-full object-contain"
+							class="h-full w-full object-contain"
 							onerror={() => onMediaError(item)}
 						/>
 					{:else if item.type === 'VIDEO'}
 						<video
 							src={item.cdnUrl}
-							class="max-h-full max-w-full object-contain"
+							class="h-full w-full object-contain"
 							autoplay
-							muted
 							playsinline
+							loop={schedule?.items?.length === 1}
+							onended={() => schedule?.items && schedule.items.length > 1 && nextItem()}
 							onerror={() => onMediaError(item)}
 						></video>
 					{:else if item.type === 'WEBPAGE'}
@@ -283,11 +313,18 @@
 							sandbox="allow-scripts allow-same-origin"
 							onerror={() => onMediaError(item)}
 						></iframe>
+					{:else if item.type === 'PDF'}
+						<iframe
+							title={item.name}
+							src={item.cdnUrl}
+							class="h-full w-full border-0"
+							onerror={() => onMediaError(item)}
+						></iframe>
 					{:else}
 						<img
 							src={item.cdnUrl}
 							alt={item.name}
-							class="max-h-full max-w-full object-contain"
+							class="h-full w-full object-contain"
 							onerror={() => onMediaError(item)}
 						/>
 					{/if}
@@ -305,11 +342,11 @@
 				{:else if scheduleStatus === 'error'}
 					<p><strong>Erreur de chargement.</strong> Vérifiez que l’écran est bien activé (JWT valide) et que l’URL correspond à cet écran.</p>
 				{:else if scheduleStatus === 'empty'}
-					<p><strong>Aucun média à afficher.</strong> Le player reçoit le planning via l’API puis affiche les médias de la playlist. Vérifiez :</p>
+					<p><strong>Aucun média à afficher.</strong> Vérifiez :</p>
 					<ul class="mt-2 list-inside list-disc text-left">
-						<li>Un <strong>planning</strong> cible cet écran (ou son groupe), avec des dates qui incluent aujourd’hui.</li>
-						<li>La <strong>playlist</strong> du planning contient au moins un média.</li>
-						<li>Chaque média a une <strong>URL</strong> renseignée (champ URL dans Médias).</li>
+						<li>Un <strong>planning</strong> cible bien <em>cet écran</em> (ou son groupe), avec des dates qui incluent <strong>aujourd’hui</strong>.</li>
+						<li>La <strong>playlist</strong> du planning contient au moins un média (Playlists → modifier la playlist → « + Ajouter » → choisir votre vidéo/image).</li>
+						<li>Chaque média a une <strong>URL</strong> ou a été ajouté par <strong>upload</strong> (pas de média sans fichier).</li>
 					</ul>
 				{:else}
 					<p>En attente du planning…</p>

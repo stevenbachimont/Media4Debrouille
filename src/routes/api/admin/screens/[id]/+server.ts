@@ -18,13 +18,14 @@ export const PUT: RequestHandler = async (event) => {
 	requireAdminOnly(event);
 	const id = event.params.id;
 	const body = await event.request.json();
-	const { name, description, groupId } = body as Record<string, string>;
+	const { name, description, groupId, playerJWTBlacklisted } = body as Record<string, unknown>;
 	const screen = await prisma.screen.update({
 		where: { id },
 		data: {
-			...(name !== undefined && { name: name?.trim() ?? '' }),
-			...(description !== undefined && { description: description?.trim() ?? null }),
-			...(groupId !== undefined && { groupId: groupId?.trim() || null })
+			...(name !== undefined && { name: (name as string)?.trim() ?? '' }),
+			...(description !== undefined && { description: (description as string)?.trim() ?? null }),
+			...(groupId !== undefined && { groupId: (groupId as string)?.trim() || null }),
+			...(typeof playerJWTBlacklisted === 'boolean' && { playerJWTBlacklisted })
 		},
 		include: { site: true, group: true }
 	});

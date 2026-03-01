@@ -37,5 +37,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 export const handleError: HandleServerError = async ({ error }) => {
 	console.error('[SvelteKit server error]', error);
-	return { message: error instanceof Error ? error.message : 'Erreur serveur' };
+	if (error && typeof error === 'object' && 'stack' in error) console.error((error as Error).stack);
+	const message = error instanceof Error ? error.message : String(error ?? 'Erreur serveur');
+	// Si le message est "{}", l’erreur vient peut‑être d’un objet stringifié : renvoyer plus d’infos
+	if (message === '{}' && error && typeof error === 'object') {
+		const detail = Object.keys(error).length ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : (error as Error).stack ?? String(error);
+		console.error('[handleError] detail:', detail);
+		return { message: 'Erreur serveur (voir console)', detail };
+	}
+	return { message };
 };

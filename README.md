@@ -116,7 +116,7 @@ Voir `.env.example`. Obligatoires :
 2. **Sites & écrans** : créer un site, un groupe, un écran (menu Sites, Écrans).
 3. **Activation** : `/admin/screens/[id]/activate` → ouvrir l’URL (ou flasher le QR) sur le device player.
 4. **Contenu** : créer des **médias** (URL), un **template**, une **playlist** (médias + ordre), un **schedule** (écran ou groupe + playlist + plage horaire).
-5. **Player** : après activation, le player affiche la playlist planifiée sur `/player/[screenId]`. Rafraîchissement à distance : bouton depuis la fiche écran ou le monitoring ; si Socket.io est indisponible (ex. en dev), le player poll `/api/player/[screenId]/reload-check` toutes les 15 s.
+5. **Player** : après activation, le player affiche la playlist planifiée sur `/player/[screenId]`. Les médias (images, vidéos) sont affichés à la **taille maximale possible** sans déformer les proportions (responsive, pas de recadrage). Rafraîchissement à distance : bouton depuis la fiche écran ou le monitoring ; si Socket.io est indisponible (ex. en dev), le player poll `/api/player/[screenId]/reload-check` toutes les 15 s.
 6. **Monitoring** : `/admin/monitoring` — statut des écrans, screenshot, recharger playlist, refresh navigateur.
 
 ---

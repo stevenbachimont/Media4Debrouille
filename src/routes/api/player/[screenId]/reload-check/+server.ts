@@ -5,7 +5,9 @@ import { consumeReloadRequested } from '$lib/server/reload-request-store';
 
 /** Le player poll cette route pour savoir s’il doit recharger (commande RELOAD envoyée sans Socket.io). */
 export const GET: RequestHandler = async (event) => {
-	const screenId = await requirePlayerAuth(event);
+	const authResult = await requirePlayerAuth(event);
+	if (authResult instanceof Response) return authResult;
+	const screenId = authResult;
 	const reload = consumeReloadRequested(screenId);
 	return json({ reload });
 };

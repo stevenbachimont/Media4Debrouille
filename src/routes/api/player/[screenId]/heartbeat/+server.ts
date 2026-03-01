@@ -4,7 +4,9 @@ import { requirePlayerAuth } from '$lib/server/player-auth';
 import { prisma } from '$lib/server/db';
 
 export const POST: RequestHandler = async (event) => {
-	const screenId = await requirePlayerAuth(event);
+	const authResult = await requirePlayerAuth(event);
+	if (authResult instanceof Response) return authResult;
+	const screenId = authResult;
 
 	let body: Record<string, unknown>;
 	try {

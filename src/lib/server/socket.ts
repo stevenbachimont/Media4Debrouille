@@ -17,8 +17,14 @@ export function createSocketServer(httpServer: HttpServer): Server {
 		if (!token) return next(new Error('Unauthorized'));
 		try {
 			const payload = await verifyPlayerJWT(token);
-			socket.data.screenId = payload.sub;
-			socket.join(`screen:${payload.sub}`);
+			const screenId = payload.sub;
+			const screen = await prisma.screen.findUnique({
+				where: { id: screenId },
+				select: { playerJWTBlacklisted: true }
+			});
+			if (!screen || screen.playerJWTBlacklisted) return next(new Error('Unauthorized'));
+			socket.data.screenId = screenId;
+			socket.join(`screen:${screenId}`);
 			next();
 		} catch {
 			next(new Error('Unauthorized'));

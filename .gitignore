@@ -13,6 +13,9 @@ prisma/*.db-journal
 /.svelte-kit
 /build
 
+# Uploads (fichiers envoyés par la console)
+/uploads
+
 # OS
 .DS_Store
 Thumbs.db
