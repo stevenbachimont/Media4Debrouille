@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
+
 	let { data } = $props();
 	const form = $derived((data as { form?: { message?: string } }).form);
 
@@ -11,6 +13,39 @@
 		{ value: 'RSS', label: 'RSS' },
 		{ value: 'DATASET', label: 'Dataset' }
 	];
+
+	let replaceStatus = $state<'idle' | 'uploading' | 'error'>('idle');
+	let replaceError = $state('');
+	const acceptUpload =
+		'image/jpeg,image/png,image/gif,image/webp,image/svg+xml,video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.webm,.mov,.jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,.ppt,.pptx';
+
+	async function handleReplaceFile(e: Event) {
+		const formEl = e.target as HTMLFormElement;
+		const formData = new FormData(formEl);
+		const file = formData.get('file') as File | null;
+		if (!file?.size || !data.media) return;
+		replaceError = '';
+		replaceStatus = 'uploading';
+		try {
+			const payload = new FormData();
+			payload.set('file', file);
+			const res = await fetch(`/api/admin/medias/${data.media.id}/replace-file`, {
+				method: 'POST',
+				body: payload
+			});
+			const out = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				replaceError = out.error || 'Erreur';
+				replaceStatus = 'error';
+				return;
+			}
+			replaceStatus = 'idle';
+			invalidateAll();
+		} catch (err) {
+			replaceError = err instanceof Error ? err.message : 'Erreur réseau';
+			replaceStatus = 'error';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -59,6 +94,30 @@
 				class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
 			/>
 		</div>
+
+		{#if data.media.s3Key || data.media.cdnUrl}
+			<div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+				<p class="text-sm font-medium text-slate-700">Remplacer le fichier</p>
+				<form onsubmit={(e) => { e.preventDefault(); handleReplaceFile(e); }} class="mt-2 flex flex-wrap items-end gap-3">
+					<input
+						name="file"
+						type="file"
+						accept={acceptUpload}
+						class="rounded border border-slate-300 px-2 py-1.5 text-sm file:mr-2 file:rounded file:border-0 file:bg-slate-700 file:px-3 file:py-1 file:text-white"
+					/>
+					<button
+						type="submit"
+						disabled={replaceStatus === 'uploading'}
+						class="rounded bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-600 disabled:opacity-50"
+					>
+						{replaceStatus === 'uploading' ? 'Envoi…' : 'Remplacer'}
+					</button>
+				</form>
+				{#if replaceError}
+					<p class="mt-2 text-sm text-red-600">{replaceError}</p>
+				{/if}
+			</div>
+		{/if}
 
 		<div>
 			<label for="duration" class="block text-sm font-medium text-slate-700">Durée (secondes, optionnel)</label>
