@@ -1,8 +1,7 @@
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
-	const res = await fetch(`/api/admin/templates/${params.id}`);
-	if (!res.ok) return { template: null };
-	const template = await res.json();
-	return { template };
+/** Plus de templates : redirection vers playlists */
+export const load: PageServerLoad = async () => {
+	throw redirect(302, '/admin/playlists');
 };

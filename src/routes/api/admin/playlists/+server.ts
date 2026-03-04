@@ -20,13 +20,7 @@ export const POST: RequestHandler = async (event) => {
 	if (!name || typeof name !== 'string' || !name.trim()) {
 		return json({ error: 'Le nom est requis' }, { status: 400 });
 	}
-	if (!templateId || typeof templateId !== 'string' || !templateId.trim()) {
-		return json({ error: 'Le template est requis' }, { status: 400 });
-	}
-
-	const template = await prisma.template.findUnique({ where: { id: templateId.trim() } });
-	if (!template) return json({ error: 'Template non trouvé' }, { status: 400 });
-
+	// Plus de template : playlist = liste ordonnée de médias
 	const duration = typeof defaultDuration === 'number' && defaultDuration > 0 ? defaultDuration : 10;
 	const trans = transition === 'SLIDE' || transition === 'NONE' ? transition : 'FADE';
 
@@ -34,7 +28,6 @@ export const POST: RequestHandler = async (event) => {
 		data: {
 			name: name.trim(),
 			description: typeof description === 'string' ? description.trim() || null : null,
-			templateId: template.id,
 			defaultDuration: duration,
 			transition: trans,
 			createdById: user.id

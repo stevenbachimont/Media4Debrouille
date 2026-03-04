@@ -225,9 +225,7 @@
 		reloadCheckTimer = setInterval(checkReload, RELOAD_CHECK_INTERVAL_MS);
 		checkReload();
 
-		// Plein écran : tentative au chargement (Chrome peut exiger un clic la 1ère fois)
-		requestFullscreen();
-		// Réessayer au premier clic si le navigateur a refusé sans geste utilisateur
+		// Plein écran : uniquement au premier clic (les navigateurs refusent requestFullscreen sans geste utilisateur)
 		const onFirstClick = () => {
 			requestFullscreen();
 			document.removeEventListener('click', onFirstClick);

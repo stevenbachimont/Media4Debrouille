@@ -8,7 +8,13 @@ export const GET: RequestHandler = async (event) => {
 	const { id } = event.params;
 	const schedule = await prisma.schedule.findUnique({
 		where: { id },
-		include: { playlist: true }
+		include: {
+			playlist: {
+				include: {
+					items: { include: { media: true }, orderBy: { order: 'asc' } }
+				}
+			}
+		}
 	});
 	if (!schedule) return json({ error: 'Planning non trouvé' }, { status: 404 });
 	return json(schedule);
@@ -22,7 +28,6 @@ export const PUT: RequestHandler = async (event) => {
 		name,
 		targetType,
 		targetId,
-		playlistId,
 		priority,
 		startDate,
 		endDate,
@@ -30,20 +35,20 @@ export const PUT: RequestHandler = async (event) => {
 		endTime,
 		daysOfWeek,
 		isRecurring,
-		isInterruption
+		isInterruption,
+		items
 	} = body as Record<string, unknown>;
 
-	const existing = await prisma.schedule.findUnique({ where: { id } });
+	const existing = await prisma.schedule.findUnique({
+		where: { id },
+		include: { playlist: true }
+	});
 	if (!existing) return json({ error: 'Planning non trouvé' }, { status: 404 });
 
 	const updates: Parameters<typeof prisma.schedule.update>[0]['data'] = {};
 	if (name !== undefined) updates.name = typeof name === 'string' ? name.trim() : existing.name;
 	if (targetType === 'SCREEN' || targetType === 'GROUP') updates.targetType = targetType;
 	if (targetId !== undefined && typeof targetId === 'string') updates.targetId = targetId.trim();
-	if (playlistId !== undefined && typeof playlistId === 'string') {
-		const pl = await prisma.playlist.findUnique({ where: { id: playlistId.trim() } });
-		if (pl) updates.playlistId = pl.id;
-	}
 	if (typeof priority === 'number' && priority >= 1 && priority <= 100) updates.priority = priority;
 	if (startDate !== undefined) updates.startDate = new Date(startDate as string);
 	if (endDate !== undefined) {
@@ -60,12 +65,45 @@ export const PUT: RequestHandler = async (event) => {
 	if (typeof isRecurring === 'boolean') updates.isRecurring = isRecurring;
 	if (typeof isInterruption === 'boolean') updates.isInterruption = isInterruption;
 
-	const schedule = await prisma.schedule.update({
-		where: { id },
-		data: updates,
-		include: { playlist: true }
+	await prisma.$transaction(async (tx) => {
+		await tx.schedule.update({
+			where: { id },
+			data: updates
+		});
+		if (Array.isArray(items) && existing.playlistId) {
+			await tx.playlistItem.deleteMany({ where: { playlistId: existing.playlistId } });
+			for (let i = 0; i < items.length; i++) {
+				const it = items[i] as { mediaId?: string; duration?: number };
+				if (it?.mediaId) {
+					await tx.playlistItem.create({
+						data: {
+							playlistId: existing.playlistId,
+							mediaId: it.mediaId,
+							zoneId: 'main',
+							order: i,
+							duration: typeof it.duration === 'number' && it.duration > 0 ? it.duration : null
+						}
+					});
+				}
+			}
+			await tx.playlist.update({
+				where: { id: existing.playlistId },
+				data: { version: (existing.playlist?.version ?? 1) + 1 }
+			});
+		}
 	});
-	return json(schedule);
+
+	const schedule = await prisma.schedule.findUnique({
+		where: { id },
+		include: {
+			playlist: {
+				include: {
+					items: { include: { media: true }, orderBy: { order: 'asc' } }
+				}
+			}
+		}
+	});
+	return json(schedule!);
 };
 
 export const DELETE: RequestHandler = async (event) => {
