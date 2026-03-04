@@ -3,10 +3,10 @@
 
 	function targetLabel(s: { targetType: string; targetId: string }) {
 		if (s.targetType === 'SCREEN') {
-			const screen = data.screens?.find((x: { id: string }) => x.id === s.targetId);
+			const screen = (data?.screens as { id: string; name: string }[])?.find((x) => x.id === s.targetId);
 			return screen?.name ?? s.targetId;
 		}
-		const group = data.groups?.find((g: { id: string }) => g.id === s.targetId);
+		const group = (data?.groups as { id: string; name: string }[])?.find((g) => g.id === s.targetId);
 		return group ? `Groupe: ${group.name}` : s.targetId;
 	}
 
@@ -41,27 +41,27 @@
 			<tr>
 				<th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Nom</th>
 				<th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Cible</th>
-				<th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Playlist</th>
+				<th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Médias</th>
 				<th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Priorité</th>
 				<th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Plage</th>
 				<th class="px-4 py-3 text-right text-xs font-medium uppercase text-slate-500">Actions</th>
 			</tr>
 		</thead>
 		<tbody class="divide-y divide-slate-200">
-			{#if data.schedules.length === 0}
+			{#if (data?.schedules?.length ?? 0) === 0}
 				<tr>
 					<td colspan="6" class="px-4 py-8 text-center text-slate-500">
 						Aucun planning. <a href="/admin/schedules/new" class="text-slate-700 underline">En créer un</a>.
 					</td>
 				</tr>
 			{:else}
-				{#each data.schedules as s}
+				{#each (data?.schedules ?? []) as s}
 					<tr class="hover:bg-slate-50">
 						<td class="px-4 py-3 font-medium text-slate-900">
 							<a href="/admin/schedules/{s.id}" class="hover:underline">{s.name}</a>
 						</td>
 						<td class="px-4 py-3 text-slate-600">{targetLabel(s)}</td>
-						<td class="px-4 py-3 text-slate-600">{s.playlist?.name ?? '—'}</td>
+						<td class="px-4 py-3 text-slate-600">{s.playlist?._count?.items ?? '—'}</td>
 						<td class="px-4 py-3 text-slate-600">{s.priority}</td>
 						<td class="px-4 py-3 text-slate-600">
 							{s.startTime}–{s.endTime} · {daysLabel(s.daysOfWeek)}

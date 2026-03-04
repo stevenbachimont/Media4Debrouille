@@ -2,6 +2,38 @@
 	let { data } = $props();
 	const form = $derived((data as { form?: { message?: string } }).form);
 
+	let items = $state<{ mediaId: string; duration: number }[]>([]);
+
+	$effect(() => {
+		const list = data.schedule?.playlist?.items ?? [];
+		items = list.map((i: { mediaId: string; duration?: number | null }) => ({
+			mediaId: i.mediaId,
+			duration: i.duration ?? data.schedule?.playlist?.defaultDuration ?? 10
+		}));
+	});
+
+	function addItem() {
+		items = [...items, { mediaId: (data.medias?.[0] as { id: string })?.id ?? '', duration: data.schedule?.playlist?.defaultDuration ?? 10 }];
+	}
+
+	function removeItem(index: number) {
+		items = items.filter((_, i) => i !== index);
+	}
+
+	function moveUp(index: number) {
+		if (index <= 0) return;
+		const next = [...items];
+		[next[index - 1], next[index]] = [next[index], next[index - 1]];
+		items = next;
+	}
+
+	function moveDown(index: number) {
+		if (index >= items.length - 1) return;
+		const next = [...items];
+		[next[index], next[index + 1]] = [next[index + 1], next[index]];
+		items = next;
+	}
+
 	function daysToStr(daysOfWeek: string) {
 		try {
 			const d = JSON.parse(daysOfWeek || '[]') as number[];
@@ -25,6 +57,7 @@
 		{#if form?.message}
 			<p class="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{form.message}</p>
 		{/if}
+		<input type="hidden" name="items" value={JSON.stringify(items)} />
 		<div>
 			<label for="name" class="block text-sm font-medium text-slate-700">Nom *</label>
 			<input id="name" name="name" type="text" required value={data.schedule.name} class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
@@ -49,14 +82,41 @@
 				</optgroup>
 			</select>
 		</div>
+
 		<div>
-			<label for="playlistId" class="block text-sm font-medium text-slate-700">Playlist *</label>
-			<select id="playlistId" name="playlistId" required class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
-				{#each data.playlists ?? [] as p}
-					<option value={p.id} selected={data.schedule.playlistId === p.id}>{p.name}</option>
+			<div class="flex items-center justify-between">
+				<span class="block text-sm font-medium text-slate-700">Médias de ce planning (ordre de lecture)</span>
+				<button type="button" onclick={addItem} class="text-sm text-slate-600 hover:text-slate-900">+ Ajouter un média</button>
+			</div>
+			<ul class="mt-2 space-y-2">
+				{#each items as item, i}
+					<li class="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 p-2">
+						<span class="w-6 text-slate-500">{i + 1}</span>
+						<select
+							bind:value={item.mediaId}
+							class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+						>
+							<option value="">— Choisir un média —</option>
+							{#each data.medias ?? [] as m}
+								<option value={m.id}>{m.name}</option>
+							{/each}
+						</select>
+						<input
+							type="number"
+							min="1"
+							bind:value={item.duration}
+							class="w-16 rounded border border-slate-300 px-2 py-1 text-sm"
+							title="Durée (s)"
+						/>
+						<span class="text-slate-500 text-xs">s</span>
+						<button type="button" onclick={() => moveUp(i)} class="rounded p-1 text-slate-500 hover:bg-slate-200" title="Monter">↑</button>
+						<button type="button" onclick={() => moveDown(i)} class="rounded p-1 text-slate-500 hover:bg-slate-200" title="Descendre">↓</button>
+						<button type="button" onclick={() => removeItem(i)} class="rounded p-1 text-red-600 hover:bg-red-50">×</button>
+					</li>
 				{/each}
-			</select>
+			</ul>
 		</div>
+
 		<div>
 			<label for="priority" class="block text-sm font-medium text-slate-700">Priorité (1–100)</label>
 			<input id="priority" name="priority" type="number" min="1" max="100" value={data.schedule.priority} class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />

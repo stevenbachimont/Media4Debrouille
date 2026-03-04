@@ -1,7 +1,7 @@
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ fetch }) => {
-	const res = await fetch('/api/admin/screens');
-	const screens = res.ok ? await res.json() : [];
-	return { screens };
+/** Redirection : Monitoring fusionné avec Écrans */
+export const load: PageServerLoad = async () => {
+	throw redirect(302, '/admin/screens');
 };

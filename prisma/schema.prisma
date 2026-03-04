@@ -169,7 +169,7 @@ model Playlist {
   id               String    @id @default(cuid())
   name             String
   description      String?
-  templateId       String
+  templateId       String?   // optionnel : plus de template, playlist = liste ordonnée de médias
   defaultDuration  Int       // secondes
   transition       PlaylistTransition @default(FADE)
   version          Int       @default(1)
@@ -178,7 +178,7 @@ model Playlist {
   createdById      String?
   createdBy        User?     @relation("PlaylistCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
-  template   Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template   Template?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
   items      PlaylistItem[]
   schedules  Schedule[]
   proofOfPlays ProofOfPlay[]

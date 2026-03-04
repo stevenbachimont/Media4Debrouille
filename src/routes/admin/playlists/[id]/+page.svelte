@@ -35,10 +35,6 @@
 	</div>
 	<dl class="mt-6 grid gap-3 sm:grid-cols-2">
 		<div>
-			<dt class="text-sm font-medium text-slate-500">Template</dt>
-			<dd class="mt-1 text-slate-800">{data.playlist.template?.name ?? '—'}</dd>
-		</div>
-		<div>
 			<dt class="text-sm font-medium text-slate-500">Durée par défaut</dt>
 			<dd class="mt-1 text-slate-800">{data.playlist.defaultDuration}s</dd>
 		</div>

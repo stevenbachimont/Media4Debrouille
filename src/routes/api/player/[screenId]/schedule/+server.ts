@@ -25,6 +25,18 @@ export const GET: RequestHandler = async (event) => {
 		const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 		const endOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
+		// Heure et jour actuels dans le fuseau du site (pour startTime/endTime et daysOfWeek)
+		const tz = screen.site?.timezone ?? 'Europe/Paris';
+		const currentTimeStr = new Date().toLocaleTimeString('en-GB', {
+			timeZone: tz,
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		});
+		const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+		const currentDayStr = new Date().toLocaleString('en-US', { timeZone: tz, weekday: 'long' });
+		const currentDayOfWeek = dayNames.indexOf(currentDayStr);
+
 		const where = {
 			OR: [
 				{ targetType: 'SCREEN' as const, targetId: screenId },
@@ -40,8 +52,24 @@ export const GET: RequestHandler = async (event) => {
 			orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }]
 		});
 
+		// Ne garder que les plannings actifs à cette heure et ce jour (timezone du site)
+		const activeSchedules = schedules.filter((s) => {
+			let days: number[] = [];
+			try {
+				days = JSON.parse(s.daysOfWeek || '[]');
+			} catch {
+				days = [0, 1, 2, 3, 4, 5, 6];
+			}
+			if (!days.includes(currentDayOfWeek)) return false;
+			const startTime = (s.startTime || '00:00').trim();
+			const endTime = (s.endTime || '23:59').trim();
+			// Actif si currentTime >= startTime ET currentTime <= endTime (arrêt à endTime passée)
+			if (currentTimeStr < startTime || currentTimeStr > endTime) return false;
+			return true;
+		});
+
 		const origin = event.url.origin;
-		let activeSchedule = schedules[0];
+		let activeSchedule = activeSchedules[0];
 		if (activeSchedule?.playlist) {
 			const playlist = activeSchedule.playlist;
 			// URL du média : cdnUrl ou url, ou pour les uploads locaux s3Key → /uploads/s3Key

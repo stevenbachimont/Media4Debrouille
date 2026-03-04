@@ -50,10 +50,6 @@
 			<dd class="mt-1 text-slate-800">{data.schedule.targetType} : {data.schedule.targetId}</dd>
 		</div>
 		<div>
-			<dt class="text-sm font-medium text-slate-500">Playlist</dt>
-			<dd class="mt-1 text-slate-800">{data.schedule.playlist?.name ?? '—'}</dd>
-		</div>
-		<div>
 			<dt class="text-sm font-medium text-slate-500">Priorité</dt>
 			<dd class="mt-1 text-slate-800">{data.schedule.priority}</dd>
 		</div>
@@ -72,4 +68,19 @@
 			</dd>
 		</div>
 	</dl>
+	<div class="mt-6">
+		<h2 class="text-sm font-medium text-slate-700">Médias ({data.schedule.playlist?.items?.length ?? 0})</h2>
+		{#if data.schedule.playlist?.items?.length}
+			<ol class="mt-2 list-decimal space-y-1 pl-5">
+				{#each data.schedule.playlist.items as item}
+					<li class="text-slate-700">
+						{item.media?.name ?? item.mediaId}
+						{#if item.duration}({item.duration}s){/if}
+					</li>
+				{/each}
+			</ol>
+		{:else}
+			<p class="mt-2 text-slate-500">Aucun média. Modifiez le planning pour en ajouter.</p>
+		{/if}
+	</div>
 {/if}

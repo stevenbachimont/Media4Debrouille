@@ -8,6 +8,8 @@
 	const HEARTBEAT_INTERVAL_MS = 30_000;
 	const FALLBACK_DURATION_MS = 10_000;
 	const RELOAD_CHECK_INTERVAL_MS = 15_000;
+	/** Rafraîchir le planning périodiquement pour respecter startTime/endTime (ex. arrêt à 22h10) */
+	const SCHEDULE_REFRESH_INTERVAL_MS = 60_000;
 
 	type ScheduleItem = {
 		mediaId: string;
@@ -37,6 +39,7 @@
 	let socket = $state<ReturnType<typeof io> | null>(null);
 	let heartbeatTimer = $state<ReturnType<typeof setInterval> | null>(null);
 	let reloadCheckTimer = $state<ReturnType<typeof setInterval> | null>(null);
+	let scheduleRefreshTimer = $state<ReturnType<typeof setInterval> | null>(null);
 	let fallbackTime = $state('');
 	let scheduleStatus = $state<'loading' | 'loaded' | 'empty' | 'error'>('loading');
 
@@ -225,9 +228,17 @@
 		reloadCheckTimer = setInterval(checkReload, RELOAD_CHECK_INTERVAL_MS);
 		checkReload();
 
-		// Plein écran : tentative au chargement (Chrome peut exiger un clic la 1ère fois)
-		requestFullscreen();
-		// Réessayer au premier clic si le navigateur a refusé sans geste utilisateur
+		// Rafraîchir le planning toutes les minutes pour appliquer startTime/endTime (ex. arrêt à 22h10)
+		const refreshSchedule = async () => {
+			const s = await fetchSchedule();
+			if (s) {
+				schedule = s;
+				if (s.items?.length && (schedule?.items?.length ?? 0) !== s.items.length) currentIndex = 0;
+			}
+		};
+		scheduleRefreshTimer = setInterval(refreshSchedule, SCHEDULE_REFRESH_INTERVAL_MS);
+
+		// Plein écran : uniquement au premier clic
 		const onFirstClick = () => {
 			requestFullscreen();
 			document.removeEventListener('click', onFirstClick);
@@ -249,6 +260,7 @@
 			document.removeEventListener('click', onFirstClick);
 			if (heartbeatTimer) clearInterval(heartbeatTimer);
 			if (reloadCheckTimer) clearInterval(reloadCheckTimer);
+			if (scheduleRefreshTimer) clearInterval(scheduleRefreshTimer);
 			clearInterval(clockTimer);
 			s?.disconnect();
 		};

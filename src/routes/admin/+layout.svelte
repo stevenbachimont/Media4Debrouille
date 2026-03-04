@@ -23,36 +23,12 @@
 		>Écrans</a
 	>
 	<a
-		href="/admin/monitoring"
-		class:font-medium={$page.url.pathname.startsWith('/admin/monitoring')}
-		class:text-slate-900={$page.url.pathname.startsWith('/admin/monitoring')}
-		class:text-slate-500={!$page.url.pathname.startsWith('/admin/monitoring')}
-		class="hover:text-slate-900"
-		>Monitoring</a
-	>
-	<a
 		href="/admin/medias"
 		class:font-medium={$page.url.pathname.startsWith('/admin/medias')}
 		class:text-slate-900={$page.url.pathname.startsWith('/admin/medias')}
 		class:text-slate-500={!$page.url.pathname.startsWith('/admin/medias')}
 		class="hover:text-slate-900"
 		>Médias</a
-	>
-	<a
-		href="/admin/playlists"
-		class:font-medium={$page.url.pathname.startsWith('/admin/playlists')}
-		class:text-slate-900={$page.url.pathname.startsWith('/admin/playlists')}
-		class:text-slate-500={!$page.url.pathname.startsWith('/admin/playlists')}
-		class="hover:text-slate-900"
-		>Playlists</a
-	>
-	<a
-		href="/admin/templates"
-		class:font-medium={$page.url.pathname.startsWith('/admin/templates')}
-		class:text-slate-900={$page.url.pathname.startsWith('/admin/templates')}
-		class:text-slate-500={!$page.url.pathname.startsWith('/admin/templates')}
-		class="hover:text-slate-900"
-		>Templates</a
 	>
 	<a
 		href="/admin/schedules"

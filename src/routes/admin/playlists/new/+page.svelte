@@ -17,15 +17,6 @@
 		<input id="name" name="name" type="text" required class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
 	</div>
 	<div>
-		<label for="templateId" class="block text-sm font-medium text-slate-700">Template *</label>
-		<select id="templateId" name="templateId" required class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
-			<option value="">Choisir un template</option>
-			{#each data.templates as t}
-				<option value={t.id}>{t.name}</option>
-			{/each}
-		</select>
-	</div>
-	<div>
 		<label for="defaultDuration" class="block text-sm font-medium text-slate-700">Durée par défaut (s)</label>
 		<input id="defaultDuration" name="defaultDuration" type="number" min="1" value="10" class="mt-1 w-full rounded border border-slate-300 px-3 py-2" />
 	</div>
